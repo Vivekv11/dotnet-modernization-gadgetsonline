@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Web;
 using GadgetsOnline.Models;
+using Microsoft.AspNetCore.Http;
+
 
 namespace GadgetsOnline.Services
 {
@@ -13,7 +14,7 @@ namespace GadgetsOnline.Services
 
         public const string CartSessionKey = "CartId";
 
-        public static ShoppingCart GetCart(HttpContextBase context)
+        public static ShoppingCart GetCart(HttpContext context)
         {
             var cart = new ShoppingCart();
             cart.ShoppingCartId = cart.GetCartId(context);
@@ -70,25 +71,25 @@ namespace GadgetsOnline.Services
             store.SaveChanges();
         }
 
-        public string GetCartId(HttpContextBase context)
+        public string GetCartId(HttpContext context)
         {
-            if (context.Session[CartSessionKey] == null)
+            if (context.Session.GetString(CartSessionKey) == null)
             {
                 if (!string.IsNullOrWhiteSpace(context.User.Identity.Name))
                 {
-                    context.Session[CartSessionKey] = context.User.Identity.Name;
+                    context.Session.SetString(CartSessionKey, context.User.Identity.Name);
                 }
                 else
                 {
-                    // Generate a new random GUID using System.Guid class
+// Generate a new random GUID using System.Guid class
                     Guid tempCartId = Guid.NewGuid();
 
                     // Send tempCartId back to client as a cookie
-                    context.Session[CartSessionKey] = tempCartId.ToString();
+                    context.Session.SetString(CartSessionKey, tempCartId.ToString());
                 }
             }
 
-            return context.Session[CartSessionKey].ToString();
+            return context.Session.GetString(CartSessionKey);
         }
 
         public void AddToCart(int id)

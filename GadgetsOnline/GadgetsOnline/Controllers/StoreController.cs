@@ -1,16 +1,17 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
-using System.Web.Mvc;
 using GadgetsOnline.Models;
 using GadgetsOnline.Services;
+using Microsoft.AspNetCore.Mvc;
+
 
 namespace GadgetsOnline.Controllers
 {
     public class StoreController : Controller
     {
-        Inventory inventory;       
+        Inventory inventory;
 
         // GET: Store
         public ActionResult Index()
@@ -18,26 +19,34 @@ namespace GadgetsOnline.Controllers
             return View();
         }
 
-        [ChildActionOnly]
-        public ActionResult CategoryMenu()
-        {         
-            inventory = new Inventory();
-            var categories = inventory.GetAllCategories();
-            return PartialView(categories);
-        }
-
         public ActionResult Browse(string category)
         {
-            inventory = new Inventory();         
+            inventory = new Inventory();
             var productModel = inventory.GetAllProductsInCategory(category);
             return View(productModel);
         }
 
         public ActionResult Details(int id)
         {
-            inventory = new Inventory();            
+            inventory = new Inventory();
             var album = inventory.GetProductById(id);
             return View(album);
+        }
+    }
+
+    public class CategoryMenuViewComponent : ViewComponent
+    {
+        private readonly Inventory _inventory;
+
+        public CategoryMenuViewComponent()
+        {
+            _inventory = new Inventory();
+        }
+
+        public IViewComponentResult Invoke()
+        {
+            var categories = _inventory.GetAllCategories();
+            return View(categories);
         }
     }
 }

@@ -1,11 +1,14 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
-using System.Web.Mvc;
 using GadgetsOnline.Models;
 using GadgetsOnline.Services;
 using GadgetsOnline.ViewModel;
+using Microsoft.AspNetCore.Mvc;
+
+using System.Text.Encodings.Web;
+
 
 namespace GadgetsOnline.Controllers
 {
@@ -48,7 +51,7 @@ namespace GadgetsOnline.Controllers
             // Display the confirmation message
             var results = new ShoppingCartRemoveViewModel
             {
-                Message = Server.HtmlEncode(productName) + " has been removed from your shopping cart.",
+                Message = HtmlEncoder.Default.Encode(productName) + " has been removed from your shopping cart.",
                 CartTotal = cart.GetTotal(),
                 CartCount = cart.GetCount(),
                 ItemCount = itemCount,

@@ -1,12 +1,13 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using System.Web.Mvc;
+using Microsoft.AspNetCore.Mvc;
+
 
 namespace GadgetsOnline.Models
 {
 
-    [Bind(Exclude = "OrderId")]
+    [Bind("FirstName,LastName,Address,City,State,PostalCode,Country,Phone,Email,Total")]
     public class Order
     {
         [ScaffoldColumn(false)]
