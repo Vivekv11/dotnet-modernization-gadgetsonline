@@ -1,46 +1,57 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Web;
+using System.Threading.Tasks;
 using GadgetsOnline.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace GadgetsOnline.Services
 {
     public class Inventory
     {
-        GadgetsOnlineEntities store = new GadgetsOnlineEntities();
+        private readonly GadgetsOnlineEntities _context;
 
-        public List<Product> GetBestSellers(int count) 
+        public Inventory(GadgetsOnlineEntities context)
         {
-            return store.Products
+            _context = context;
+        }
+
+        public async Task<List<Product>> GetBestSellers(int count)
+        {
+            return await _context.Products
                     .Take(count)
-                    .ToList();                                            
+                    .ToListAsync();
         }
 
-        public List<Category> GetAllCategories()
+        public async Task<List<Category>> GetAllCategories()
         {
-            return store.Categories.ToList();
+            return await _context.Categories.ToListAsync();
         }
 
-        public List<Product> GetAllProductsInCategory(string category)
+        public async Task<List<Product>> GetAllProductsInCategory(string category)
         {
-            return store.Products
+            return await _context.Products
+                    .Include(p => p.Category)
                     .Where(p => p.Category.Name == category)
-                    .ToList();
+                    .ToListAsync();
         }
 
-        public Product GetProductById(int id)
+#nullable enable
+        public async Task<Product?> GetProductById(int id)
         {
-            return store.Products
+            return await _context.Products
+                    .Include(p => p.Category)
                    .Where(p => p.ProductId == id)
-                   .FirstOrDefault();
+                   .FirstOrDefaultAsync();
         }
 
-        internal string GetProductNameById(int id)
+        public async Task<string?> GetProductNameById(int id)
         {
-            return store.Products
+            var product = await _context.Products
                    .Where(p => p.ProductId == id)
-                   .FirstOrDefault().Name;
+                   .Select(p => p.Name)
+                   .FirstOrDefaultAsync();
+
+            return product;
         }
     }
 }

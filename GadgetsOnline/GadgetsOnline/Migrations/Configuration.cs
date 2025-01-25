@@ -1,23 +1,13 @@
-﻿namespace GadgetsOnline.Migrations
+﻿using GadgetsOnline.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace GadgetsOnline.Migrations
 {
-    using System;
-    using System.Data.Entity;
-    using System.Data.Entity.Migrations;
-    using System.Linq;
-
-    internal sealed class Configuration : DbMigrationsConfiguration<GadgetsOnline.Models.GadgetsOnlineEntities>
+    public class Configuration : IEntityTypeConfiguration<GadgetsOnlineEntities>
     {
-        public Configuration()
+        public void Configure(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<GadgetsOnlineEntities> builder)
         {
-            AutomaticMigrationsEnabled = false;
-        }
-
-        protected override void Seed(GadgetsOnline.Models.GadgetsOnlineEntities context)
-        {
-            //  This method will be called after migrating to the latest version.
-
-            //  You can use the DbSet<T>.AddOrUpdate() helper extension method
-            //  to avoid creating duplicate seed data.
+            // Configuration settings here
         }
     }
 }

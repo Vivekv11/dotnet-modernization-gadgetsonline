@@ -1,52 +1,56 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-using GadgetsOnline.Models;
+using System.Threading.Tasks;
 using GadgetsOnline.Services;
 using Microsoft.AspNetCore.Mvc;
-
+using Microsoft.Extensions.Logging;
 
 namespace GadgetsOnline.Controllers
 {
     public class StoreController : Controller
     {
-        Inventory inventory;
+        private readonly Inventory _inventory;
+        private readonly ILogger<StoreController> _logger;
+
+        public StoreController(Inventory inventory, ILogger<StoreController> logger)
+        {
+            _inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
 
         // GET: Store
-        public ActionResult Index()
+        public IActionResult Index()
         {
             return View();
         }
 
-        public ActionResult Browse(string category)
+        public async Task<IActionResult> Browse(string category)
         {
-            inventory = new Inventory();
-            var productModel = inventory.GetAllProductsInCategory(category);
-            return View(productModel);
+            try
+            {
+                var products = await _inventory.GetAllProductsInCategory(category);
+
+                return View(products);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error browsing category {Category}", category);
+                return RedirectToAction("Error", "Home");
+            }
         }
 
-        public ActionResult Details(int id)
+        public async Task<IActionResult> Details(int id)
         {
-            inventory = new Inventory();
-            var album = inventory.GetProductById(id);
-            return View(album);
-        }
-    }
+            try
+            {
+                var product = await _inventory.GetProductById(id);
 
-    public class CategoryMenuViewComponent : ViewComponent
-    {
-        private readonly Inventory _inventory;
-
-        public CategoryMenuViewComponent()
-        {
-            _inventory = new Inventory();
-        }
-
-        public IViewComponentResult Invoke()
-        {
-            var categories = _inventory.GetAllCategories();
-            return View(categories);
+                return View(product);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving product {ProductId}", id);
+                return RedirectToAction("Error", "Home");
+            }
         }
     }
 }

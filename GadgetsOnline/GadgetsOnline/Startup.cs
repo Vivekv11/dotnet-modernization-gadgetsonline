@@ -1,16 +1,12 @@
-
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using GadgetsOnline.Models;
+using GadgetsOnline.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace GadgetsOnline
 {
@@ -28,11 +24,29 @@ namespace GadgetsOnline
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllersWithViews();
-            //Added Services
+
+            services.AddDbContext<GadgetsOnlineEntities>(options =>
+                options.UseSqlServer(
+                    Configuration.GetConnectionString("GadgetsOnlineEntities")
+            ));
+
+            services.AddScoped<Inventory>();
+
+            services.AddScoped<ShoppingCart>();
+
+            services.AddScoped<OrderProcessing>();
+
+            services.AddDistributedMemoryCache(); // Required for session state
+            services.AddSession(options =>
+            {
+                options.IdleTimeout = TimeSpan.FromMinutes(30); // Set your desired timeout
+                options.Cookie.HttpOnly = true;
+                options.Cookie.IsEssential = true;
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public static void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
             {
@@ -46,12 +60,14 @@ namespace GadgetsOnline
             }
             app.UseHttpsRedirection();
             app.UseStaticFiles();
-            
+
             //Added Middleware
 
             app.UseRouting();
 
             app.UseAuthorization();
+
+            app.UseSession();
 
             app.UseEndpoints(endpoints =>
             {
@@ -62,10 +78,8 @@ namespace GadgetsOnline
         }
     }
 
-    public class ConfigurationManager
+    public static class ConfigurationManager
     {
         public static IConfiguration Configuration { get; set; }
     }
-
 }
-

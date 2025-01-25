@@ -1,177 +1,226 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using GadgetsOnline.Models;
 using Microsoft.AspNetCore.Http;
-
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace GadgetsOnline.Services
 {
     public class ShoppingCart
     {
-        GadgetsOnlineEntities store = new GadgetsOnlineEntities();
-        string ShoppingCartId { get; set; }
+        private readonly GadgetsOnlineEntities _context;
+        private readonly ILogger<ShoppingCart> _logger;
+
+        private string ShoppingCartId { get; set; }
 
         public const string CartSessionKey = "CartId";
 
-        public static ShoppingCart GetCart(HttpContext context)
+        public ShoppingCart(GadgetsOnlineEntities context, ILogger<ShoppingCart> logger)
         {
-            var cart = new ShoppingCart();
+            _context = context;
+            _logger = logger;
+        }
+
+        public static async Task<ShoppingCart> GetCartAsync(HttpContext context)
+        {
+            var services = context.RequestServices;
+            var dbContext = services.GetRequiredService<GadgetsOnlineEntities>();
+            var logger = services.GetRequiredService<ILogger<ShoppingCart>>();
+
+            var cart = new ShoppingCart(dbContext, logger);
             cart.ShoppingCartId = cart.GetCartId(context);
             return cart;
         }
 
-        internal int CreateOrder(Order order)
+        public async Task<int> CreateOrderAsync(Order order)
         {
-            decimal orderTotal = 0;
-
-            var cartItems = GetCartItems();
-
-            // Iterate over the items in the cart, adding the order details for each
-            foreach (var item in cartItems)
+            try
             {
-                var orderDetail = new OrderDetail
+                decimal orderTotal = 0;
+                var cartItems = await GetCartItemsAsync();
+
+                // Iterate over the items in the cart, adding the order details for each
+                foreach (var item in cartItems)
                 {
-                    ProductId = item.ProductId,
-                    OrderId = order.OrderId,
-                    UnitPrice = item.Product.Price,
-                    Quantity = item.Count
-                };
+                    var orderDetail = new OrderDetail
+                    {
+                        ProductId = item.ProductId,
+                        OrderId = order.OrderId,
+                        UnitPrice = item.Product.Price,
+                        Quantity = item.Count
+                    };
 
-                // Set the order total of the shopping cart
-                orderTotal += (item.Count * item.Product.Price);
+                    orderTotal += (item.Count * item.Product.Price);
+                    await _context.OrderDetails.AddAsync(orderDetail);
+                }
 
-                store.OrderDetails.Add(orderDetail);
+                order.Total = orderTotal;
+                await _context.SaveChangesAsync();
+                await EmptyCartAsync();
 
+                return order.OrderId;
             }
-
-            // Set the order's total to the orderTotal count
-            order.Total = orderTotal;
-
-            // Save the order
-            store.SaveChanges();
-
-            // Empty the shopping cart
-            EmptyCart();
-
-            // Return the OrderId as the confirmation number
-            return order.OrderId;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating order for cart {CartId}", ShoppingCartId);
+                throw;
+            }
         }
 
-        private void EmptyCart()
+        private async Task EmptyCartAsync()
         {
-            var cartItems = store.Carts.Where(cart => cart.CartId == ShoppingCartId);
+            var cartItems = await _context.Carts
+                .Where(cart => cart.CartId == ShoppingCartId)
+                .ToListAsync();
 
-            foreach (var cartItem in cartItems)
-            {
-                store.Carts.Remove(cartItem);
-            }
-
-            // Save changes
-            store.SaveChanges();
+            _context.Carts.RemoveRange(cartItems);
+            await _context.SaveChangesAsync();
         }
 
         public string GetCartId(HttpContext context)
         {
             if (context.Session.GetString(CartSessionKey) == null)
             {
-                if (!string.IsNullOrWhiteSpace(context.User.Identity.Name))
+                if (!string.IsNullOrWhiteSpace(context.User.Identity?.Name))
                 {
                     context.Session.SetString(CartSessionKey, context.User.Identity.Name);
                 }
                 else
                 {
-// Generate a new random GUID using System.Guid class
-                    Guid tempCartId = Guid.NewGuid();
-
-                    // Send tempCartId back to client as a cookie
-                    context.Session.SetString(CartSessionKey, tempCartId.ToString());
+                    var tempCartId = Guid.NewGuid().ToString();
+                    context.Session.SetString(CartSessionKey, tempCartId);
                 }
             }
 
-            return context.Session.GetString(CartSessionKey);
+            return context.Session.GetString(CartSessionKey) ??
+                throw new InvalidOperationException("Failed to create or retrieve cart ID");
         }
 
-        public void AddToCart(int id)
-        {            
-            var cartItem = store.Carts.SingleOrDefault(
-                        c => c.CartId == ShoppingCartId
-                        && c.ProductId == id);
-
-
-            if (cartItem == null)
-            {
-                // Create a new cart item if no cart item exists
-                cartItem = new Cart
-                {
-                    ProductId = id,
-                    CartId = ShoppingCartId,
-                    Count = 1,
-                    DateCreated = DateTime.Now
-                };
-
-                store.Carts.Add(cartItem);
-            }
-            else
-            {
-                // If the item does exist in the cart, then add one to the quantity
-                cartItem.Count++;
-            }
-
-            // Save changes
-            store.SaveChanges();
-        }
-
-        public int GetCount()
+        public async Task AddToCartAsync(int id)
         {
-            int? count = (from cartItems in store.Carts
-                          where cartItems.CartId == ShoppingCartId
-                          select (int?)cartItems.Count).Sum();
-
-            return count ?? 0;
-        }
-
-        internal int RemoveFromCart(int id)
-        {
-            // Get the cart
-            var cartItem = store.Carts.Single(
-                            cart => cart.CartId == ShoppingCartId
-                            && cart.ProductId == id);
-
-            int itemCount = 0;
-
-            if (cartItem != null)
+            try
             {
-                if (cartItem.Count > 1)
+                var cartItem = await _context.Carts
+                    .SingleOrDefaultAsync(c => c.CartId == ShoppingCartId && c.ProductId == id);
+
+                if (cartItem == null)
                 {
-                    cartItem.Count--;
-                    itemCount = cartItem.Count;
+                    cartItem = new Cart
+                    {
+                        ProductId = id,
+                        CartId = ShoppingCartId,
+                        Count = 1,
+                        DateCreated = DateTime.UtcNow
+                    };
+
+                    await _context.Carts.AddAsync(cartItem);
                 }
                 else
                 {
-                    store.Carts.Remove(cartItem);
+                    cartItem.Count++;
                 }
 
-                // Save changes
-                store.SaveChanges();
+                await _context.SaveChangesAsync();
             }
-
-            return itemCount;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error adding product {ProductId} to cart {CartId}", id, ShoppingCartId);
+                throw;
+            }
         }
 
-        public List<Cart> GetCartItems()
+        public async Task<int> GetCountAsync()
         {
-            return store.Carts.Where(cart => cart.CartId == ShoppingCartId).ToList();
+            try
+            {
+                var count = await _context.Carts
+                    .Where(c => c.CartId == ShoppingCartId)
+                    .SumAsync(c => (int?)c.Count);
+
+                return count ?? 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting count for cart {CartId}", ShoppingCartId);
+                throw;
+            }
         }
 
-        public decimal GetTotal()
+        public async Task<int> RemoveFromCartAsync(int id)
         {
-            decimal? total = (from cartItems in store.Carts
-                              where cartItems.CartId == ShoppingCartId
-                              select (int?)cartItems.Count * cartItems.Product.Price).Sum();
-            return total ?? decimal.Zero;
+            try
+            {
+                // Get the cart item
+                var cartItem = await _context.Carts
+                    .SingleOrDefaultAsync(cart => cart.CartId == ShoppingCartId
+                                             && cart.ProductId == id);
 
+                int itemCount = 0;
+
+                if (cartItem != null)
+                {
+                    if (cartItem.Count > 1)
+                    {
+                        cartItem.Count--;
+                        itemCount = cartItem.Count;
+                    }
+                    else
+                    {
+                        _context.Carts.Remove(cartItem);
+                    }
+
+                    await _context.SaveChangesAsync();
+                }
+
+                return itemCount;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing product {ProductId} from cart {CartId}",
+                    id, ShoppingCartId);
+                throw;
+            }
+        }
+
+        public async Task<List<Cart>> GetCartItemsAsync()
+        {
+            try
+            {
+                return await _context.Carts
+                    .Where(cart => cart.CartId == ShoppingCartId)
+                    .Include(c => c.Product) // Include related Product data
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving items for cart {CartId}",
+                    ShoppingCartId);
+                throw;
+            }
+        }
+
+        public async Task<decimal> GetTotalAsync()
+        {
+            try
+            {
+                var total = await _context.Carts
+                    .Where(cart => cart.CartId == ShoppingCartId)
+                    .Include(c => c.Product)
+                    .Select(cartItem => (decimal)cartItem.Count * cartItem.Product.Price)
+                    .SumAsync();
+
+                return total;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calculating total for cart {CartId}",
+                    ShoppingCartId);
+                throw;
+            }
         }
     }
-
 }

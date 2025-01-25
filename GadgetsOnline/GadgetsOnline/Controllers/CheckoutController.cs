@@ -1,68 +1,81 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
+using System.Threading.Tasks;
 using GadgetsOnline.Models;
 using GadgetsOnline.Services;
 using Microsoft.AspNetCore.Mvc;
-
-using Microsoft.AspNetCore.Http;
-
+using Microsoft.Extensions.Logging;
 
 namespace GadgetsOnline.Controllers
 {
     public class CheckoutController : Controller
     {
-        OrderProcessing orderProcessing;
-        private OrderProcessing GetOrderProcess()
+        private readonly OrderProcessing _orderProcessing;
+        private readonly ILogger<CheckoutController> _logger;
+
+        public CheckoutController(OrderProcessing orderProcessing, ILogger<CheckoutController> logger)
         {
-            if (this.orderProcessing == null)
-            {
-                this.orderProcessing = new OrderProcessing();
-            }
-            return this.orderProcessing;
+            _orderProcessing = orderProcessing ?? throw new ArgumentNullException(nameof(orderProcessing));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         // GET: Checkout
-        public ActionResult Index()
+        public IActionResult Index()
         {
             return View();
         }
 
-        // GET: Checkout
-        public ActionResult AddressAndPayment()
+        // GET: Checkout/AddressAndPayment
+        public IActionResult AddressAndPayment()
         {
             return View();
         }
 
         [HttpPost]
-        public ActionResult AddressAndPayment(FormCollection values)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddressAndPayment([FromForm] Order order)
         {
-            var order = new Order();
-            /* Added by CTA: This updated method might require the parameters to be re-organized */
-TryUpdateModelAsync(order);
-
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    return View(order);
+                }
 
-                order.Username = "Anonymous";
-                order.OrderDate = DateTime.Now;
+                order.Username = User.Identity?.IsAuthenticated == true
+                    ? User.Identity.Name
+                    : "Anonymous";
+                order.OrderDate = DateTime.UtcNow;
 
-                bool result = GetOrderProcess().ProcessOrder(order, this.HttpContext);
+                var result = await _orderProcessing.ProcessOrderAsync(order, HttpContext);
 
-                return RedirectToAction("Complete",
-                    new { id = order.OrderId });
+                if (result)
+                {
+                    return RedirectToAction(nameof(Complete), new { id = order.OrderId });
+                }
+
+                ModelState.AddModelError("", "Unable to process your order. Please try again.");
+                return View(order);
             }
-            catch
+            catch (Exception ex)
             {
-                //Invalid - redisplay with errors
+                _logger.LogError(ex, "Error processing order for user {Username}", order.Username);
+                ModelState.AddModelError("", "An error occurred while processing your order.");
                 return View(order);
             }
         }
 
-        public ActionResult Complete(int id)
+        // GET: Checkout/Complete/5
+        public Task<IActionResult> Complete(int id)
         {
-            return View(id);
+            try
+            {
+                return Task.FromResult<IActionResult>(View(id));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving order {OrderId}", id);
+                return Task.FromResult<IActionResult>(RedirectToAction("Error", "Home"));
+            }
         }
     }
 }

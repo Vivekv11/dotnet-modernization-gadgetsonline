@@ -1,31 +1,42 @@
-using GadgetsOnline.Services;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
+using System.Threading.Tasks;
+using GadgetsOnline.Services;
 using Microsoft.AspNetCore.Mvc;
-
+using Microsoft.Extensions.Logging;
 
 namespace GadgetsOnline.Controllers
 {
     public class HomeController : Controller
     {
-        Inventory inventory;        
+        private readonly Inventory _inventory;
+        private readonly ILogger<HomeController> _logger;
 
-        public ActionResult Index()
-        {            
-            inventory = new Inventory();
-            var products = inventory.GetBestSellers(6);
-            return View(products);
+        public HomeController(Inventory inventory, ILogger<HomeController> logger)
+        {
+            _inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public ActionResult About()
+        public async Task<IActionResult> Index()
+        {
+            try
+            {
+                var products = await _inventory.GetBestSellers(6);
+                return View(products);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving best sellers");
+                return View("Error");
+            }
+        }
+        public IActionResult About()
         {
             ViewBag.Message = "Your application description page.";
             return View();
         }
 
-        public ActionResult Contact()
+        public IActionResult Contact()
         {
             ViewBag.Message = "Your contact page.";
             return View();

@@ -3,10 +3,8 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 
-
 namespace GadgetsOnline.Models
 {
-
     [Bind("FirstName,LastName,Address,City,State,PostalCode,Country,Phone,Email,Total")]
     public class Order
     {

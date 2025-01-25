@@ -1,30 +1,93 @@
-﻿namespace GadgetsOnline.Migrations
+﻿using Microsoft.EntityFrameworkCore.Migrations;
+
+namespace GadgetsOnline.Migrations
 {
-    using System;
-    using System.Data.Entity.Migrations;
-    
-    public partial class UpdatedCar : DbMigration
+    public partial class UpdatedCar : Migration
     {
-        public override void Up()
+        protected override void Up(MigrationBuilder migrationBuilder)
         {
-            DropForeignKey("dbo.Carts", "Product_ProductId", "dbo.Products");
-            DropIndex("dbo.Carts", new[] { "Product_ProductId" });
-            RenameColumn(table: "dbo.Carts", name: "Product_ProductId", newName: "ProductId");
-            AlterColumn("dbo.Carts", "ProductId", c => c.Int(nullable: false));
-            CreateIndex("dbo.Carts", "ProductId");
-            AddForeignKey("dbo.Carts", "ProductId", "dbo.Products", "ProductId", cascadeDelete: true);
-            DropColumn("dbo.Carts", "PizzaId");
+            migrationBuilder.DropForeignKey(
+                name: "FK_Carts_Products_Product_ProductId",
+                table: "Carts");
+
+            migrationBuilder.DropIndex(
+                name: "IX_Carts_Product_ProductId",
+                table: "Carts");
+
+            migrationBuilder.RenameColumn(
+                name: "Product_ProductId",
+                table: "Carts",
+                newName: "ProductId");
+
+            migrationBuilder.AlterColumn<int>(
+                name: "ProductId",
+                table: "Carts",
+                type: "int",
+                nullable: false,
+                defaultValue: 0,
+                oldClrType: typeof(int),
+                oldType: "int",
+                oldNullable: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Carts_ProductId",
+                table: "Carts",
+                column: "ProductId");
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_Carts_Products_ProductId",
+                table: "Carts",
+                column: "ProductId",
+                principalTable: "Products",
+                principalColumn: "ProductId",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.DropColumn(
+                name: "PizzaId",
+                table: "Carts");
         }
-        
-        public override void Down()
+
+        protected override void Down(MigrationBuilder migrationBuilder)
         {
-            AddColumn("dbo.Carts", "PizzaId", c => c.Int(nullable: false));
-            DropForeignKey("dbo.Carts", "ProductId", "dbo.Products");
-            DropIndex("dbo.Carts", new[] { "ProductId" });
-            AlterColumn("dbo.Carts", "ProductId", c => c.Int());
-            RenameColumn(table: "dbo.Carts", name: "ProductId", newName: "Product_ProductId");
-            CreateIndex("dbo.Carts", "Product_ProductId");
-            AddForeignKey("dbo.Carts", "Product_ProductId", "dbo.Products", "ProductId");
+            migrationBuilder.AddColumn<int>(
+                name: "PizzaId",
+                table: "Carts",
+                type: "int",
+                nullable: false,
+                defaultValue: 0);
+
+            migrationBuilder.DropForeignKey(
+                name: "FK_Carts_Products_ProductId",
+                table: "Carts");
+
+            migrationBuilder.DropIndex(
+                name: "IX_Carts_ProductId",
+                table: "Carts");
+
+            migrationBuilder.AlterColumn<int>(
+                name: "ProductId",
+                table: "Carts",
+                type: "int",
+                nullable: true,
+                oldClrType: typeof(int),
+                oldType: "int");
+
+            migrationBuilder.RenameColumn(
+                name: "ProductId",
+                table: "Carts",
+                newName: "Product_ProductId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Carts_Product_ProductId",
+                table: "Carts",
+                column: "Product_ProductId");
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_Carts_Products_Product_ProductId",
+                table: "Carts",
+                column: "Product_ProductId",
+                principalTable: "Products",
+                principalColumn: "ProductId");
         }
     }
 }
