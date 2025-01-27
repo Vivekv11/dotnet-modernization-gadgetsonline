@@ -7,13 +7,11 @@ namespace GadgetsOnline.Models
         public GadgetsOnlineEntities(DbContextOptions<GadgetsOnlineEntities> options)
         : base(options)
         {
-            Database.EnsureCreated();
+
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            base.OnModelCreating(modelBuilder);
-
             modelBuilder.Entity<Category>().HasData(
                 new Category { CategoryId = 1, Name = "Mobile Phones", Description = "Latest collection of Mobile Phones" },
                 new Category { CategoryId = 2, Name = "Laptops", Description = "Latest Laptops in 2022" },
