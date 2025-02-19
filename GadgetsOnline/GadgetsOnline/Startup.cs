@@ -4,6 +4,7 @@ using GadgetsOnline.Models;
 using GadgetsOnline.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -66,7 +67,7 @@ namespace GadgetsOnline
                 var logger = serviceScope.ServiceProvider.GetRequiredService<ILogger<Startup>>();
                 var config = serviceScope.ServiceProvider.GetRequiredService<IConfiguration>();
                 var db = serviceScope.ServiceProvider.GetRequiredService<GadgetsOnlineEntities>().Database;
-
+                var connectionString = config.GetConnectionString("GadgetsOnlineEntities");
                 logger.LogInformation(config.GetConnectionString("GadgetsOnlineEntities"));
                 logger.LogInformation("Migrating database...");
 
@@ -78,6 +79,34 @@ namespace GadgetsOnline
                 {
                     try
                     {
+                        // Create a master connection string to create database
+                        var builder = new SqlConnectionStringBuilder(connectionString);
+                        var databaseName = builder.InitialCatalog;
+                        builder.InitialCatalog = "master";
+
+                        using (var connection = new SqlConnection(builder.ConnectionString))
+                        {
+                            connection.Open();
+
+                            // Check if database exists
+                            var checkDbCommand = $"SELECT COUNT(*) FROM sys.databases WHERE name = '{databaseName}'";
+                            using (var command = new SqlCommand(checkDbCommand, connection))
+                            {
+                                var databaseExists = (int)command.ExecuteScalar() > 0;
+
+                                if (!databaseExists)
+                                {
+                                    logger.LogInformation($"Database {databaseName} does not exist. Creating...");
+                                    var createDbCommand = $"CREATE DATABASE [{databaseName}]";
+                                    using (var createCommand = new SqlCommand(createDbCommand, connection))
+                                    {
+                                        createCommand.ExecuteNonQuery();
+                                    }
+                                    logger.LogInformation($"Database {databaseName} created successfully.");
+                                }
+                            }
+                        }
+
                         if (!db.CanConnect())
                         {
                             try

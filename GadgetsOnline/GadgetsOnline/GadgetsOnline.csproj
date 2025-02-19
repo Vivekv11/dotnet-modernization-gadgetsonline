@@ -19,6 +19,12 @@
 	</PropertyGroup>
 	<PropertyGroup />
 	<ItemGroup>
+	  <Content Remove="Fargate.json" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Compile Include="Fargate.json" />
+	</ItemGroup>
+	<ItemGroup>
 		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.1" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.1">
 		  <PrivateAssets>all</PrivateAssets>

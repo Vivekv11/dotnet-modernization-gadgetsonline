@@ -1,0 +1,121 @@
+﻿{
+    "family": "mvc-sql-task",
+    "containerDefinitions": [
+        {
+            "name": "mvc-app",
+            "image": "571600873882.dkr.ecr.us-east-1.amazonaws.com/gadgetsonline",
+            "cpu": 512,
+            "memory": 1536,
+            "portMappings": [
+                {
+                    "name": "80",
+                    "containerPort": 80,
+                    "hostPort": 80,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                }
+            ],
+            "essential": true,
+            "environment": [
+                {
+                    "name": "ConnectionStrings__GadgetsOnlineEntities",
+                    "value": "Server=localhost, 1433;Database=gadgetsonlinedb;User Id=sa;Password=Dv55569998dv@;TrustServerCertificate=True"
+                }
+            ],
+            "environmentFiles": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "dependsOn": [
+                {
+                    "containerName": "sqlserver",
+                    "condition": "HEALTHY"
+                }
+            ],
+            "ulimits": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/mvc-sql-task",
+                    "mode": "non-blocking",
+                    "awslogs-create-group": "true",
+                    "max-buffer-size": "25m",
+                    "awslogs-region": "us-east-1",
+                    "awslogs-stream-prefix": "ecs"
+                },
+                "secretOptions": []
+            },
+            "systemControls": []
+        },
+        {
+            "name": "sqlserver",
+            "image": "571600873882.dkr.ecr.us-east-1.amazonaws.com/mysql-server",
+            "cpu": 512,
+            "memory": 1536,
+            "portMappings": [
+                {
+                    "name": "1443",
+                    "containerPort": 1443,
+                    "hostPort": 1443,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                }
+            ],
+            "essential": false,
+            "environment": [
+                {
+                    "name": "MSSQL_PID",
+                    "value": "Developer"
+                },
+                {
+                    "name": "SA_PASSWORD",
+                    "value": "Dv55569998dv@"
+                },
+                {
+                    "name": "ACCEPT_EULA",
+                    "value": "Y"
+                }
+            ],
+            "environmentFiles": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/mvc-sql-task",
+                    "mode": "non-blocking",
+                    "awslogs-create-group": "true",
+                    "max-buffer-size": "25m",
+                    "awslogs-region": "us-east-1",
+                    "awslogs-stream-prefix": "ecs"
+                },
+                "secretOptions": []
+            },
+            "healthCheck": {
+                "command": [
+                    "CMD-SHELL",
+                    "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P Dv55569998dv@ -Q \"SELECT 1\" -C"
+                ],
+                "interval": 10,
+                "timeout": 5,
+                "retries": 3,
+                "startPeriod": 40
+            },
+            "systemControls": []
+        }
+    ],
+    "taskRoleArn": "arn:aws:iam::571600873882:role/ecs_execution_WebApplication1",
+    "executionRoleArn": "arn:aws:iam::571600873882:role/ecs_execution_WebApplication1",
+    "networkMode": "awsvpc",
+    "volumes": [],
+    "placementConstraints": [],
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "1024",
+    "memory": "3072",
+    "runtimePlatform": {
+        "cpuArchitecture": "X86_64",
+        "operatingSystemFamily": "LINUX"
+    },
+    "enableFaultInjection": false
+}
