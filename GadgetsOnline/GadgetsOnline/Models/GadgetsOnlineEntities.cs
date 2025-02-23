@@ -1,10 +1,10 @@
 ﻿using System.Data.Entity;
-
+using GadgetsOnline;
 namespace GadgetsOnline.Models
 {
     public class GadgetsOnlineEntities : DbContext
     {
-        public GadgetsOnlineEntities() : base("Name=GadgetsOnlineEntities")
+        public GadgetsOnlineEntities() : base(ConnStringHelper.GetConnectionString())
         {
             Database.SetInitializer(new GadgetsOnlineDBInitializer());
         }
